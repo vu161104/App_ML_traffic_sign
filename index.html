@@ -1,0 +1,865 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>Nhận Diện Biển Báo Giao Thông</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/dist/tabler-icons.min.css"/>
+<style>
+:root{
+  --bg:#faf8f4;
+  --surface:#ffffff;
+  --s2:#f5f2ec;
+  --s3:#ece8df;
+  --border:#ddd8ce;
+  --border2:#c8c0b0;
+  --accent:#b07d20;
+  --accent-light:#f0e4c4;
+  --accent-mid:#d4a030;
+  --text:#221e14;
+  --muted:#9a8e78;
+  --muted2:#6b6050;
+  --green:#3a6b2a;
+  --red:#8b2020;
+  --r:10px;
+  --r2:16px;
+}
+
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+
+body{
+  background:var(--bg);
+  color:var(--text);
+  font-family:'Times New Roman',Times,serif;
+  min-height:100vh;
+  display:flex;flex-direction:column;align-items:center;
+  padding:40px 16px 80px;
+  overflow-x:hidden;
+}
+
+/* ── Background ── */
+.bg-layer{
+  position:fixed;inset:0;pointer-events:none;z-index:0;
+  overflow:hidden;
+}
+.bg-grid{
+  position:absolute;inset:0;
+  background-image:
+    linear-gradient(var(--border) 1px,transparent 1px),
+    linear-gradient(90deg,var(--border) 1px,transparent 1px);
+  background-size:52px 52px;
+}
+.bg-glow-1{
+  position:absolute;
+  top:-15%;left:50%;transform:translateX(-50%);
+  width:800px;height:600px;
+  background:radial-gradient(ellipse at center,var(--accent-light) 0%,transparent 60%);
+  opacity:.5;
+}
+.bg-glow-2{display:none}
+.bg-noise{display:none}
+
+/* ── Header ── */
+header{
+  position:relative;z-index:1;
+  text-align:center;
+  margin-bottom:44px;
+  animation:fadeUp .6s ease both;
+}
+
+.badge{
+  display:inline-flex;align-items:center;gap:7px;
+  background:var(--accent-light);
+  border:1px solid var(--border2);
+  color:var(--accent);
+  font-family:'Times New Roman',Times,serif;
+  font-size:10.5px;letter-spacing:.12em;text-transform:uppercase;
+  padding:5px 15px;border-radius:20px;margin-bottom:20px;
+  font-style:italic;
+}
+.badge-dot{
+  width:6px;height:6px;border-radius:50%;
+  background:var(--accent);
+  animation:pulse 2s ease-in-out infinite;
+}
+@keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.4;transform:scale(.8)}}
+
+h1{
+  font-family:'Times New Roman',Times,serif;
+  font-size:clamp(2.6rem,8vw,5.5rem);
+  letter-spacing:-.01em;
+  line-height:1.15;
+  color:var(--text);
+  font-weight:700;
+}
+h1 .accent{
+  color:var(--accent);
+  font-style:italic;
+}
+h1 .block2{
+  display:block;
+  color:var(--text);
+  font-style:normal;
+}
+
+.sub{
+  margin-top:14px;
+  color:var(--muted2);
+  font-size:.95rem;
+  font-style:italic;
+  max-width:440px;
+  margin-left:auto;margin-right:auto;
+  line-height:1.75;
+}
+
+.pills{
+  display:flex;justify-content:center;gap:8px;
+  margin-top:20px;flex-wrap:wrap;
+}
+.pill{
+  display:inline-flex;align-items:center;gap:6px;
+  background:var(--s2);
+  border:1px solid var(--border);
+  border-radius:4px;padding:5px 13px;
+  font-family:'Times New Roman',Times,serif;
+  font-size:.8rem;letter-spacing:.02em;
+  color:var(--muted2);
+  transition:border-color .2s,color .2s;
+}
+.pill:hover{border-color:var(--accent);color:var(--accent)}
+.pill-val{color:var(--green);font-weight:700}
+
+/* ── Layout ── */
+.container{
+  position:relative;z-index:1;
+  width:100%;max-width:940px;
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:18px;
+  animation:fadeUp .6s .1s ease both;
+}
+@media(max-width:680px){.container{grid-template-columns:1fr}}
+
+/* ── Card ── */
+.card{
+  background:var(--surface);
+  border:1px solid var(--border);
+  border-radius:var(--r2);
+  padding:22px;
+  position:relative;
+  overflow:hidden;
+  box-shadow:0 2px 12px rgba(0,0,0,.06);
+}
+.card::before{
+  content:'';
+  position:absolute;top:0;left:0;right:0;height:2px;
+  background:linear-gradient(90deg,transparent,var(--accent-light),transparent);
+}
+.card-title{
+  font-family:'Times New Roman',Times,serif;
+  font-size:.82rem;font-weight:700;
+  letter-spacing:.08em;text-transform:uppercase;
+  color:var(--muted);margin-bottom:18px;
+  display:flex;align-items:center;gap:8px;
+}
+.card-title i{color:var(--accent);font-size:15px}
+
+/* ── Tabs ── */
+.tabs{
+  display:flex;gap:5px;margin-bottom:16px;
+  background:var(--s2);border:1px solid var(--border);
+  padding:4px;border-radius:10px;
+}
+.tab{
+  flex:1;padding:8px;
+  border-radius:7px;border:none;
+  background:none;color:var(--muted2);
+  font-family:'Times New Roman',Times,serif;font-size:.88rem;font-weight:400;
+  cursor:pointer;
+  display:flex;align-items:center;justify-content:center;gap:6px;
+  transition:all .2s;
+}
+.tab:hover{color:var(--text)}
+.tab.active{
+  background:var(--accent-light);
+  border:1px solid var(--border2);
+  color:var(--accent);
+  box-shadow:0 1px 6px rgba(0,0,0,.06);
+  font-style:italic;font-weight:700;
+}
+.tab i{font-size:14px}
+
+/* ── Input Pane ── */
+.input-pane{display:none;flex-direction:column;gap:10px}
+.input-pane.show{display:flex}
+
+/* Drop zone */
+.drop-zone{
+  border:1.5px dashed var(--border2);
+  border-radius:var(--r);
+  background:var(--s2);
+  min-height:220px;
+  display:flex;flex-direction:column;
+  align-items:center;justify-content:center;
+  gap:10px;padding:24px;
+  cursor:pointer;position:relative;
+  transition:all .22s;text-align:center;
+}
+.drop-zone:hover,.drop-zone.drag-over{
+  border-color:var(--accent);
+  background:var(--accent-light);
+}
+.drop-zone input{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%}
+.drop-icon{
+  width:52px;height:52px;
+  background:var(--accent-light);
+  border:1px solid var(--border2);
+  border-radius:12px;
+  display:flex;align-items:center;justify-content:center;
+  transition:all .2s;
+}
+.drop-zone:hover .drop-icon{
+  background:var(--s3);
+  border-color:var(--accent);
+}
+.drop-icon i{color:var(--accent);font-size:22px}
+.drop-title{
+  font-family:'Times New Roman',Times,serif;
+  font-weight:700;font-size:.95rem;
+  color:var(--text);
+}
+.drop-hint{
+  font-family:'Times New Roman',Times,serif;
+  font-size:.8rem;color:var(--muted);
+  margin-top:2px;line-height:1.5;font-style:italic;
+}
+
+/* Preview */
+.preview-wrap{
+  display:none;flex-direction:column;align-items:center;
+  gap:10px;min-height:220px;justify-content:center;
+}
+.preview-wrap.show{display:flex}
+.preview-img{
+  max-width:100%;max-height:200px;
+  border-radius:10px;
+  border:1px solid var(--border2);
+  object-fit:contain;
+}
+.preview-meta{
+  display:flex;align-items:center;gap:7px;flex-wrap:wrap;justify-content:center;
+}
+.tag{
+  font-family:'Times New Roman',Times,serif;
+  font-size:.75rem;color:var(--muted2);
+  background:var(--s3);border:1px solid var(--border);
+  padding:3px 10px;border-radius:4px;font-style:italic;
+}
+.btn-sm{
+  font-family:'Times New Roman',Times,serif;font-size:.8rem;
+  padding:4px 11px;border-radius:6px;
+  border:1px solid var(--border2);
+  background:none;color:var(--muted2);
+  cursor:pointer;transition:all .18s;
+  display:flex;align-items:center;gap:4px;
+}
+.btn-sm:hover{border-color:var(--red);color:var(--red)}
+
+/* Camera */
+.cam-wrap{
+  position:relative;border-radius:var(--r);overflow:hidden;
+  background:#111;min-height:220px;
+  display:flex;align-items:center;justify-content:center;
+}
+#video{width:100%;border-radius:var(--r);display:block;max-height:240px;object-fit:cover}
+.cam-off-msg{
+  display:flex;flex-direction:column;align-items:center;gap:10px;
+  color:#888;text-align:center;
+}
+.cam-off-msg i{font-size:30px;color:#444}
+.cam-off-msg p{font-family:'Times New Roman',Times,serif;font-size:.85rem;line-height:1.6;color:#aaa;font-style:italic;}
+.cam-controls{display:flex;gap:8px;margin-top:8px}
+
+/* Buttons */
+.btn-analyse{
+  width:100%;padding:14px;
+  background:var(--accent);color:#fff;
+  font-family:'Times New Roman',Times,serif;
+  font-size:1.05rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;
+  border:none;border-radius:var(--r);
+  cursor:pointer;transition:all .2s;
+  display:flex;align-items:center;justify-content:center;gap:10px;
+  position:relative;overflow:hidden;
+}
+.btn-analyse::after{
+  content:'';position:absolute;inset:0;
+  background:linear-gradient(90deg,transparent 40%,rgba(255,255,255,.12),transparent 60%);
+  transform:translateX(-100%);
+  transition:transform .5s;
+}
+.btn-analyse:hover::after{transform:translateX(100%)}
+.btn-analyse:hover{background:var(--accent-mid);transform:translateY(-1px);box-shadow:0 6px 20px rgba(176,125,32,.25)}
+.btn-analyse:active{transform:translateY(0)}
+.btn-analyse:disabled{
+  background:var(--s3);color:var(--muted);
+  cursor:not-allowed;transform:none;box-shadow:none;
+}
+.btn-analyse:disabled::after{display:none}
+.btn-analyse i{font-size:17px}
+
+.btn-secondary{
+  flex:1;padding:9px;
+  background:none;color:var(--muted2);
+  font-family:'Times New Roman',Times,serif;font-size:.85rem;font-weight:400;
+  border:1px solid var(--border2);border-radius:var(--r);
+  cursor:pointer;transition:all .2s;
+  display:flex;align-items:center;justify-content:center;gap:6px;
+}
+.btn-secondary:hover{border-color:var(--accent);color:var(--accent)}
+.btn-secondary i{font-size:15px}
+
+/* ── Result ── */
+.result-empty{
+  display:flex;flex-direction:column;
+  align-items:center;justify-content:center;
+  min-height:280px;gap:14px;text-align:center;
+}
+.result-empty .empty-icon{
+  width:64px;height:64px;
+  background:var(--s2);border:1px solid var(--border);
+  border-radius:16px;
+  display:flex;align-items:center;justify-content:center;
+  font-size:26px;
+}
+.result-empty p{
+  font-family:'Times New Roman',Times,serif;
+  font-size:.88rem;color:var(--muted);
+  max-width:220px;line-height:1.8;font-style:italic;
+}
+.result-empty strong{color:var(--muted2);font-style:normal}
+
+#result-content{display:none}
+#result-content.show{display:block}
+
+/* Sign header */
+.result-head{
+  display:flex;align-items:flex-start;gap:14px;
+  margin-bottom:16px;
+}
+.sign-visual{
+  width:64px;height:64px;flex-shrink:0;
+  background:var(--s2);border:1px solid var(--border);
+  border-radius:14px;
+  display:flex;align-items:center;justify-content:center;
+  font-size:28px;
+  box-shadow:0 1px 4px rgba(0,0,0,.06);
+}
+
+.class-badge{
+  display:inline-flex;align-items:center;gap:5px;
+  background:var(--accent-light);border:1px solid var(--border2);
+  color:var(--accent);
+  font-family:'Times New Roman',Times,serif;
+  font-size:.72rem;letter-spacing:.08em;text-transform:uppercase;
+  padding:3px 10px;border-radius:20px;margin-bottom:8px;
+  font-style:italic;
+}
+.result-label{
+  font-family:'Times New Roman',Times,serif;
+  font-size:1.3rem;font-weight:700;
+  color:var(--text);line-height:1.2;
+  margin-bottom:8px;
+}
+.result-desc{
+  font-family:'Times New Roman',Times,serif;
+  font-size:.88rem;color:var(--muted2);
+  line-height:1.75;margin-bottom:14px;
+  font-style:italic;
+}
+
+/* Confidence */
+.conf-row{display:flex;align-items:baseline;justify-content:space-between;margin-bottom:8px}
+.conf-label{
+  font-family:'Times New Roman',Times,serif;
+  font-size:.75rem;color:var(--muted);
+  letter-spacing:.06em;text-transform:uppercase;font-style:italic;
+}
+.conf-val{
+  font-family:'Times New Roman',Times,serif;
+  font-size:1.8rem;font-weight:700;letter-spacing:-.01em;
+}
+.conf-bar-bg{
+  height:5px;background:var(--s3);border-radius:3px;
+  overflow:hidden;margin-bottom:16px;
+}
+.conf-bar-fill{
+  height:100%;
+  background:linear-gradient(90deg,var(--accent),var(--accent-mid));
+  border-radius:3px;
+  transition:width .7s cubic-bezier(.4,0,.2,1);
+  width:0%;
+  position:relative;
+}
+.conf-bar-fill::after{
+  content:'';
+  position:absolute;right:0;top:0;bottom:0;
+  width:12px;
+  background:rgba(255,255,255,.3);
+  filter:blur(3px);
+}
+
+/* Divider */
+.divider{height:1px;background:var(--border);margin:14px 0}
+
+/* Top 3 */
+.top3-title{
+  font-family:'Times New Roman',Times,serif;
+  font-size:.75rem;color:var(--muted);
+  text-transform:uppercase;letter-spacing:.08em;
+  font-weight:700;margin-bottom:10px;font-style:italic;
+}
+.top3-item{
+  display:flex;align-items:center;gap:10px;
+  padding:9px 12px;border-radius:6px;
+  border:1px solid var(--border);background:var(--s2);
+  margin-bottom:6px;
+  transition:border-color .2s,background .2s;
+}
+.top3-item:hover{border-color:var(--border2);background:var(--s3)}
+.top3-item.first{
+  border-color:var(--border2);
+  background:var(--accent-light);
+}
+.top3-rank{
+  width:22px;height:22px;border-radius:50%;
+  background:var(--s3);border:1px solid var(--border);
+  display:flex;align-items:center;justify-content:center;
+  font-family:'Times New Roman',Times,serif;
+  font-size:.72rem;font-weight:700;color:var(--muted2);flex-shrink:0;
+}
+.top3-item.first .top3-rank{
+  background:var(--accent-light);
+  border-color:var(--border2);
+  color:var(--accent);
+}
+.top3-name{
+  flex:1;font-family:'Times New Roman',Times,serif;
+  font-size:.85rem;font-weight:400;
+  color:var(--text);line-height:1.35;
+}
+.top3-conf{
+  font-family:'Times New Roman',Times,serif;
+  font-size:.8rem;font-weight:700;color:var(--muted);
+  flex-shrink:0;
+}
+.top3-item.first .top3-conf{color:var(--accent)}
+
+/* img info tags */
+.img-info{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px}
+
+/* Error */
+.error-box{
+  display:flex;align-items:flex-start;gap:10px;
+  background:rgba(185,28,28,.05);border:1px solid rgba(185,28,28,.18);
+  border-radius:var(--r);padding:12px;margin-top:12px;
+}
+.error-box i{color:var(--red);font-size:15px;flex-shrink:0;margin-top:2px}
+.error-box p{font-family:'Times New Roman',Times,serif;font-size:.85rem;color:#991b1b;line-height:1.6;font-style:italic;}
+
+/* Spinner */
+.spinner{
+  width:26px;height:26px;
+  border:2.5px solid var(--accent-light);
+  border-top-color:var(--accent);
+  border-radius:50%;
+  animation:spin .75s linear infinite;
+}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* Animations */
+@keyframes fadeUp{
+  from{opacity:0;transform:translateY(18px)}
+  to{opacity:1;transform:translateY(0)}
+}
+
+/* Mobile */
+@media(max-width:480px){
+  .card{padding:16px}
+  .cam-controls{flex-wrap:wrap}
+  h1{font-size:3rem}
+}
+</style>
+</head>
+<body>
+
+<div class="bg-layer">
+  <div class="bg-grid"></div>
+  <div class="bg-glow-1"></div>
+  <div class="bg-glow-2"></div>
+  <div class="bg-noise"></div>
+</div>
+
+<!-- Header -->
+<header>
+  <div class="badge"><div class="badge-dot"></div>AI · Traffic Sign · HOG + SVM</div>
+  <h1>
+    <span class="accent">NHẬN DIỆN</span><br>
+    <span class="block2">BIỂN BÁO</span>
+  </h1>
+  <p class="sub">Phân loại biển báo giao thông Việt Nam sử dụng trích xuất đặc trưng HOG và bộ phân loại SVM theo thời gian thực</p>
+  <div class="pills">
+    <div class="pill"><span class="pill-val">HOG</span> Feature Extraction</div>
+    <div class="pill"><span class="pill-val">SVM</span> Classifier</div>
+    <div class="pill"><span class="pill-val">10</span> Loại biển báo</div>
+  </div>
+</header>
+
+<!-- Main -->
+<div class="container">
+
+  <!-- LEFT -->
+  <div class="card">
+    <div class="card-title"><i class="ti ti-photo-scan"></i>Nguồn ảnh đầu vào</div>
+
+    <div class="tabs">
+      <button class="tab active" id="tab-upload" onclick="switchTab('upload')">
+        <i class="ti ti-upload"></i> Tải ảnh lên
+      </button>
+      <button class="tab" id="tab-camera" onclick="switchTab('camera')">
+        <i class="ti ti-camera"></i> Dùng Camera
+      </button>
+    </div>
+
+    <!-- Upload -->
+    <div class="input-pane show" id="pane-upload">
+      <div class="drop-zone" id="drop-zone">
+        <input type="file" id="file-input" accept="image/*"/>
+        <div class="drop-icon"><i class="ti ti-cloud-upload"></i></div>
+        <p class="drop-title">Kéo &amp; thả ảnh vào đây</p>
+        <p class="drop-hint">hoặc nhấp để chọn file<br>PNG · JPG · BMP · WEBP</p>
+      </div>
+      <div class="preview-wrap" id="preview-wrap">
+        <img class="preview-img" id="preview-img" src="" alt="preview"/>
+        <div class="preview-meta">
+          <span class="tag" id="file-name-tag">—</span>
+          <span class="tag" id="file-size-tag">—</span>
+          <button class="btn-sm" onclick="resetUpload()"><i class="ti ti-trash" style="font-size:11px"></i> Xóa</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Camera -->
+    <div class="input-pane" id="pane-camera">
+      <div class="cam-wrap" id="cam-wrap">
+        <div class="cam-off-msg" id="cam-off-msg">
+          <i class="ti ti-camera-off"></i>
+          <p>Camera chưa bật.<br>Nhấn nút bên dưới để khởi động.</p>
+        </div>
+        <video id="video" autoplay playsinline style="display:none"></video>
+        <canvas id="snapshot-canvas" style="display:none"></canvas>
+      </div>
+      <div class="cam-controls">
+        <button class="btn-secondary" id="btn-start-cam" onclick="startCamera()">
+          <i class="ti ti-camera"></i> Bật Camera
+        </button>
+        <button class="btn-secondary" id="btn-capture" onclick="captureFrame()" style="display:none">
+          <i class="ti ti-capture"></i> Chụp ảnh
+        </button>
+        <button class="btn-secondary" id="btn-stop-cam" onclick="stopCamera()" style="display:none">
+          <i class="ti ti-camera-off"></i> Tắt
+        </button>
+      </div>
+      <div class="preview-wrap" id="cam-preview-wrap">
+        <img class="preview-img" id="cam-preview-img" src="" alt="captured"/>
+        <div class="preview-meta">
+          <span class="tag">📸 ảnh vừa chụp</span>
+          <button class="btn-sm" onclick="resetCapture()"><i class="ti ti-x" style="font-size:11px"></i> Chụp lại</button>
+        </div>
+      </div>
+    </div>
+
+    <div style="height:14px"></div>
+
+    <button class="btn-analyse" id="btn-analyse" onclick="analyse()" disabled>
+      <i class="ti ti-scan" id="analyse-icon"></i>
+      <span id="analyse-text">Chọn ảnh trước</span>
+    </button>
+
+    <div class="error-box" id="error-box" style="display:none">
+      <i class="ti ti-alert-circle"></i>
+      <p id="error-msg">Đã có lỗi xảy ra.</p>
+    </div>
+  </div>
+
+  <!-- RIGHT -->
+  <div class="card">
+    <div class="card-title"><i class="ti ti-chart-dots-3"></i>Kết quả phân tích</div>
+
+    <div class="result-empty" id="result-empty">
+      <div class="empty-icon">🚦</div>
+      <p>Tải ảnh lên hoặc chụp từ camera, sau đó nhấn <strong>Phân Tích</strong> để nhận kết quả.</p>
+    </div>
+
+    <div class="result-empty" id="result-loading" style="display:none">
+      <div class="spinner"></div>
+      <p>Đang phân tích ảnh…</p>
+    </div>
+
+    <div id="result-content">
+      <div class="result-head">
+        <div class="sign-visual" id="sign-visual">🚦</div>
+        <div style="flex:1">
+          <div class="class-badge" id="result-class-badge">Class —</div>
+          <div class="result-label" id="result-label">—</div>
+          <div class="img-info" id="img-info"></div>
+        </div>
+      </div>
+
+      <div class="result-desc" id="result-desc">—</div>
+
+      <div class="conf-row">
+        <span class="conf-label">Độ tin cậy</span>
+        <span class="conf-val" id="conf-val">—%</span>
+      </div>
+      <div class="conf-bar-bg"><div class="conf-bar-fill" id="conf-bar"></div></div>
+
+      <div class="divider"></div>
+
+      <div class="top3-title">Top 3 dự đoán</div>
+      <div id="top3-list"></div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+// ── State ─────────────────────────────
+let currentMode = 'upload';
+let uploadFile  = null;
+let capturedBlob = null;
+let cameraStream = null;
+let API_BASE = 'http://localhost:5000';
+
+// ── Sign metadata ──────────────────────
+const SIGN_INFO = {
+  0:{icon:'⭐',desc:'Xe ở giao lộ phía trước được quyền ưu tiên đi trước các xe đến từ hướng khác.'},
+  1:{icon:'🟡',desc:'Đường này có quyền ưu tiên so với các đường nhánh cắt ngang.'},
+  2:{icon:'🔺',desc:'Phải nhường đường cho xe đang lưu thông trên đường ưu tiên.'},
+  3:{icon:'🛑',desc:'Bắt buộc dừng hẳn trước vạch dừng. Không được tiếp tục cho đến khi an toàn.'},
+  4:{icon:'➡️',desc:'Bắt buộc rẽ phải tại điểm chỉ định phía trước. Không được đi thẳng hay rẽ trái.'},
+  5:{icon:'⬅️',desc:'Bắt buộc rẽ trái tại điểm chỉ định phía trước. Không được đi thẳng hay rẽ phải.'},
+  6:{icon:'⬆️',desc:'Chỉ được phép đi thẳng, không được rẽ sang hai bên.'},
+  7:{icon:'↗️',desc:'Được phép đi thẳng hoặc rẽ phải. Không được rẽ trái.'},
+  8:{icon:'↖️',desc:'Được phép đi thẳng hoặc rẽ trái. Không được rẽ phải.'},
+  9:{icon:'🔄',desc:'Bắt buộc phải đi theo chiều của vòng xuyến (theo chiều ngược chiều kim đồng hồ).'},
+};
+
+// ── Tabs ──────────────────────────────
+function switchTab(mode){
+  currentMode = mode;
+  document.getElementById('tab-upload').classList.toggle('active', mode==='upload');
+  document.getElementById('tab-camera').classList.toggle('active', mode==='camera');
+  document.getElementById('pane-upload').classList.toggle('show', mode==='upload');
+  document.getElementById('pane-camera').classList.toggle('show', mode==='camera');
+  if(mode==='upload') stopCamera();
+  updateAnalyseBtn();
+}
+
+// ── Upload ─────────────────────────────
+const dropZone   = document.getElementById('drop-zone');
+const fileInput  = document.getElementById('file-input');
+const previewWrap = document.getElementById('preview-wrap');
+
+fileInput.addEventListener('change', e=>{ if(e.target.files[0]) loadFile(e.target.files[0]); });
+dropZone.addEventListener('dragover', e=>{ e.preventDefault(); dropZone.classList.add('drag-over'); });
+dropZone.addEventListener('dragleave', ()=> dropZone.classList.remove('drag-over'));
+dropZone.addEventListener('drop', e=>{
+  e.preventDefault(); dropZone.classList.remove('drag-over');
+  const f = e.dataTransfer.files[0];
+  if(f && f.type.startsWith('image/')) loadFile(f);
+});
+
+function loadFile(f){
+  uploadFile = f;
+  const url = URL.createObjectURL(f);
+  document.getElementById('preview-img').src = url;
+  document.getElementById('file-name-tag').textContent = f.name.length>28 ? f.name.slice(0,25)+'…' : f.name;
+  document.getElementById('file-size-tag').textContent = (f.size/1024).toFixed(1)+' KB';
+  dropZone.style.display='none';
+  previewWrap.classList.add('show');
+  updateAnalyseBtn(); hideError();
+}
+
+function resetUpload(){
+  uploadFile = null; fileInput.value='';
+  document.getElementById('preview-img').src='';
+  previewWrap.classList.remove('show');
+  dropZone.style.display='';
+  updateAnalyseBtn(); clearResult();
+}
+
+// ── Camera ─────────────────────────────
+const video = document.getElementById('video');
+
+async function startCamera(){
+  try{
+    cameraStream = await navigator.mediaDevices.getUserMedia({video:{facingMode:'environment'},audio:false});
+    video.srcObject = cameraStream;
+    video.style.display = 'block';
+    document.getElementById('cam-off-msg').style.display = 'none';
+    document.getElementById('btn-start-cam').style.display = 'none';
+    document.getElementById('btn-capture').style.display = '';
+    document.getElementById('btn-stop-cam').style.display = '';
+  } catch(err){
+    showError('Không thể truy cập camera: '+err.message);
+  }
+}
+
+function stopCamera(){
+  if(cameraStream){ cameraStream.getTracks().forEach(t=>t.stop()); cameraStream=null; }
+  video.srcObject = null; video.style.display = 'none';
+  document.getElementById('cam-off-msg').style.display = '';
+  document.getElementById('btn-start-cam').style.display = '';
+  document.getElementById('btn-capture').style.display = 'none';
+  document.getElementById('btn-stop-cam').style.display = 'none';
+}
+
+function captureFrame(){
+  const canvas = document.getElementById('snapshot-canvas');
+  canvas.width = video.videoWidth; canvas.height = video.videoHeight;
+  canvas.getContext('2d').drawImage(video,0,0);
+  canvas.toBlob(blob=>{
+    capturedBlob = blob;
+    const url = URL.createObjectURL(blob);
+    document.getElementById('cam-preview-img').src = url;
+    document.getElementById('cam-preview-wrap').classList.add('show');
+    updateAnalyseBtn(); hideError();
+  },'image/jpeg',0.92);
+}
+
+function resetCapture(){
+  capturedBlob = null;
+  document.getElementById('cam-preview-wrap').classList.remove('show');
+  updateAnalyseBtn(); clearResult();
+}
+
+// ── Analyse ────────────────────────────
+function updateAnalyseBtn(){
+  const btn = document.getElementById('btn-analyse');
+  const txt = document.getElementById('analyse-text');
+  const has = (currentMode==='upload' && uploadFile) || (currentMode==='camera' && capturedBlob);
+  btn.disabled = !has;
+  txt.textContent = has ? 'PHÂN TÍCH BIỂN BÁO' : (currentMode==='upload' ? 'Chọn ảnh trước' : 'Chụp ảnh trước');
+}
+
+async function analyse(){
+  const btn = document.getElementById('btn-analyse');
+  const icon = document.getElementById('analyse-icon');
+  const txt  = document.getElementById('analyse-text');
+  hideError(); showLoading();
+  btn.disabled = true;
+  icon.className = '';
+  txt.innerHTML = '<span class="spinner" style="width:16px;height:16px;border-width:2px;display:inline-block;vertical-align:middle"></span>&nbsp;Đang phân tích…';
+
+  const fd = new FormData();
+  if(currentMode==='upload') fd.append('image', uploadFile, uploadFile.name);
+  else fd.append('image', capturedBlob, 'capture.jpg');
+
+  try{
+    const res = await fetch('/predict',{method:'POST',body:fd});
+    const data = await res.json();
+    if(!res.ok) throw new Error(data.error || 'Lỗi server: '+res.status);
+    displayResult(data);
+  } catch(err){
+    clearResult();
+    showError('Không thể kết nối tới API: '+err.message);
+  } finally{
+    btn.disabled = false;
+    icon.className = 'ti ti-scan';
+    txt.textContent = 'PHÂN TÍCH BIỂN BÁO';
+    hideLoading();
+  }
+}
+
+// ── Display ────────────────────────────
+function displayResult(d){
+  document.getElementById('result-empty').style.display   = 'none';
+  document.getElementById('result-loading').style.display = 'none';
+  document.getElementById('result-content').classList.add('show');
+
+  const info = SIGN_INFO[d.predicted_class] || {icon:'🚦',desc:'Không có mô tả chi tiết.'};
+  document.getElementById('sign-visual').textContent         = info.icon;
+  document.getElementById('result-class-badge').textContent  = 'Class ' + d.predicted_class;
+  document.getElementById('result-label').textContent        = d.predicted_label;
+  document.getElementById('result-desc').textContent         = info.desc;
+
+  const imgInfo = document.getElementById('img-info');
+  imgInfo.innerHTML = '';
+  if(d.image_size) addTag(imgInfo, d.image_size.width+'×'+d.image_size.height+' px');
+
+  const conf = d.confidence;
+  const confEl = document.getElementById('conf-val');
+  confEl.textContent = conf.toFixed(1)+'%';
+  confEl.style.color = conf>=80 ? 'var(--green)' : conf>=50 ? 'var(--accent)' : 'var(--red)';
+  setTimeout(()=>{ document.getElementById('conf-bar').style.width = conf+'%'; },80);
+
+  const list = document.getElementById('top3-list');
+  list.innerHTML = '';
+  d.top3.forEach((item,i)=>{
+    const el = document.createElement('div');
+    el.className = 'top3-item'+(i===0?' first':'');
+    el.innerHTML = `
+      <div class="top3-rank">${i+1}</div>
+      <div class="top3-name">${item.label}</div>
+      <div class="top3-conf">${item.confidence.toFixed(1)}%</div>`;
+    list.appendChild(el);
+  });
+}
+
+function addTag(parent, text){
+  const s = document.createElement('span');
+  s.className='tag'; s.textContent=text;
+  parent.appendChild(s);
+}
+
+function clearResult(){
+  document.getElementById('result-empty').style.display   = '';
+  document.getElementById('result-loading').style.display = 'none';
+  document.getElementById('result-content').classList.remove('show');
+  document.getElementById('conf-bar').style.width = '0%';
+}
+
+function showLoading(){
+  document.getElementById('result-empty').style.display   = 'none';
+  document.getElementById('result-loading').style.display = '';
+  document.getElementById('result-content').classList.remove('show');
+}
+function hideLoading(){ document.getElementById('result-loading').style.display = 'none'; }
+
+function showError(msg){
+  document.getElementById('error-msg').textContent = msg;
+  document.getElementById('error-box').style.display = 'flex';
+}
+function hideError(){ document.getElementById('error-box').style.display='none'; }
+
+// ── API health check ───────────────────
+async function checkApi(){
+  const dot = document.getElementById('status-dot');
+  const txt = document.getElementById('status-txt');
+  dot.className='status-dot'; txt.textContent='Đang kiểm tra…';
+  try{
+    const res = await fetch('/health', {signal: AbortSignal.timeout(4000)});
+    if(res.ok){ dot.className='status-dot ok'; txt.textContent='Kết nối thành công'; }
+    else       { dot.className='status-dot err'; txt.textContent='Lỗi server '+res.status; }
+  } catch{
+    dot.className='status-dot err';
+    txt.textContent='Không thể kết nối';
+  }
+}
+
+// Auto-check on load
+// checkApi(); // API box removed
+</script>
+</body>
+</html>
