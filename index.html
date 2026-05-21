@@ -57,8 +57,6 @@ body{
   background:radial-gradient(ellipse at center,var(--accent-light) 0%,transparent 60%);
   opacity:.5;
 }
-.bg-glow-2{display:none}
-.bg-noise{display:none}
 
 /* ── Header ── */
 header{
@@ -373,87 +371,10 @@ h1 .block2{
 }
 .result-desc{
   font-family:'Times New Roman',Times,serif;
-  font-size:.88rem;color:var(--muted2);
-  line-height:1.75;margin-bottom:14px;
+  font-size:1.08rem;color:var(--muted2);
+  line-height:1.75;
   font-style:italic;
 }
-
-/* Confidence */
-.conf-row{display:flex;align-items:baseline;justify-content:space-between;margin-bottom:8px}
-.conf-label{
-  font-family:'Times New Roman',Times,serif;
-  font-size:.75rem;color:var(--muted);
-  letter-spacing:.06em;text-transform:uppercase;font-style:italic;
-}
-.conf-val{
-  font-family:'Times New Roman',Times,serif;
-  font-size:1.8rem;font-weight:700;letter-spacing:-.01em;
-}
-.conf-bar-bg{
-  height:5px;background:var(--s3);border-radius:3px;
-  overflow:hidden;margin-bottom:16px;
-}
-.conf-bar-fill{
-  height:100%;
-  background:linear-gradient(90deg,var(--accent),var(--accent-mid));
-  border-radius:3px;
-  transition:width .7s cubic-bezier(.4,0,.2,1);
-  width:0%;
-  position:relative;
-}
-.conf-bar-fill::after{
-  content:'';
-  position:absolute;right:0;top:0;bottom:0;
-  width:12px;
-  background:rgba(255,255,255,.3);
-  filter:blur(3px);
-}
-
-/* Divider */
-.divider{height:1px;background:var(--border);margin:14px 0}
-
-/* Top 3 */
-.top3-title{
-  font-family:'Times New Roman',Times,serif;
-  font-size:.75rem;color:var(--muted);
-  text-transform:uppercase;letter-spacing:.08em;
-  font-weight:700;margin-bottom:10px;font-style:italic;
-}
-.top3-item{
-  display:flex;align-items:center;gap:10px;
-  padding:9px 12px;border-radius:6px;
-  border:1px solid var(--border);background:var(--s2);
-  margin-bottom:6px;
-  transition:border-color .2s,background .2s;
-}
-.top3-item:hover{border-color:var(--border2);background:var(--s3)}
-.top3-item.first{
-  border-color:var(--border2);
-  background:var(--accent-light);
-}
-.top3-rank{
-  width:22px;height:22px;border-radius:50%;
-  background:var(--s3);border:1px solid var(--border);
-  display:flex;align-items:center;justify-content:center;
-  font-family:'Times New Roman',Times,serif;
-  font-size:.72rem;font-weight:700;color:var(--muted2);flex-shrink:0;
-}
-.top3-item.first .top3-rank{
-  background:var(--accent-light);
-  border-color:var(--border2);
-  color:var(--accent);
-}
-.top3-name{
-  flex:1;font-family:'Times New Roman',Times,serif;
-  font-size:.85rem;font-weight:400;
-  color:var(--text);line-height:1.35;
-}
-.top3-conf{
-  font-family:'Times New Roman',Times,serif;
-  font-size:.8rem;font-weight:700;color:var(--muted);
-  flex-shrink:0;
-}
-.top3-item.first .top3-conf{color:var(--accent)}
 
 /* img info tags */
 .img-info{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px}
@@ -496,8 +417,6 @@ h1 .block2{
 <div class="bg-layer">
   <div class="bg-grid"></div>
   <div class="bg-glow-1"></div>
-  <div class="bg-glow-2"></div>
-  <div class="bg-noise"></div>
 </div>
 
 <!-- Header -->
@@ -615,19 +534,7 @@ h1 .block2{
           <div class="img-info" id="img-info"></div>
         </div>
       </div>
-
       <div class="result-desc" id="result-desc">—</div>
-
-      <div class="conf-row">
-        <span class="conf-label">Độ tin cậy</span>
-        <span class="conf-val" id="conf-val">—%</span>
-      </div>
-      <div class="conf-bar-bg"><div class="conf-bar-fill" id="conf-bar"></div></div>
-
-      <div class="divider"></div>
-
-      <div class="top3-title">Top 3 dự đoán</div>
-      <div id="top3-list"></div>
     </div>
   </div>
 
@@ -639,7 +546,6 @@ let currentMode = 'upload';
 let uploadFile  = null;
 let capturedBlob = null;
 let cameraStream = null;
-let API_BASE = 'http://localhost:5000';
 
 // ── Sign metadata ──────────────────────
 const SIGN_INFO = {
@@ -744,6 +650,24 @@ function resetCapture(){
   updateAnalyseBtn(); clearResult();
 }
 
+// ── Resize ─────────────────────────────
+const RESIZE_W = 64;
+const RESIZE_H = 64;
+
+function resizeImage(source){
+  return new Promise(resolve => {
+    const img = new Image();
+    img.onload = () => {
+      const canvas = document.createElement('canvas');
+      canvas.width  = RESIZE_W;
+      canvas.height = RESIZE_H;
+      canvas.getContext('2d').drawImage(img, 0, 0, RESIZE_W, RESIZE_H);
+      canvas.toBlob(blob => resolve(blob), 'image/jpeg', 0.92);
+    };
+    img.src = URL.createObjectURL(source);
+  });
+}
+
 // ── Analyse ────────────────────────────
 function updateAnalyseBtn(){
   const btn = document.getElementById('btn-analyse');
@@ -762,9 +686,11 @@ async function analyse(){
   icon.className = '';
   txt.innerHTML = '<span class="spinner" style="width:16px;height:16px;border-width:2px;display:inline-block;vertical-align:middle"></span>&nbsp;Đang phân tích…';
 
+  const raw = currentMode==='upload' ? uploadFile : capturedBlob;
+  const resized = await resizeImage(raw);
   const fd = new FormData();
-  if(currentMode==='upload') fd.append('image', uploadFile, uploadFile.name);
-  else fd.append('image', capturedBlob, 'capture.jpg');
+  const fname = currentMode==='upload' ? uploadFile.name : 'capture.jpg';
+  fd.append('image', resized, fname);
 
   try{
     const res = await fetch('/predict',{method:'POST',body:fd});
@@ -797,24 +723,6 @@ function displayResult(d){
   const imgInfo = document.getElementById('img-info');
   imgInfo.innerHTML = '';
   if(d.image_size) addTag(imgInfo, d.image_size.width+'×'+d.image_size.height+' px');
-
-  const conf = d.confidence;
-  const confEl = document.getElementById('conf-val');
-  confEl.textContent = conf.toFixed(1)+'%';
-  confEl.style.color = conf>=80 ? 'var(--green)' : conf>=50 ? 'var(--accent)' : 'var(--red)';
-  setTimeout(()=>{ document.getElementById('conf-bar').style.width = conf+'%'; },80);
-
-  const list = document.getElementById('top3-list');
-  list.innerHTML = '';
-  d.top3.forEach((item,i)=>{
-    const el = document.createElement('div');
-    el.className = 'top3-item'+(i===0?' first':'');
-    el.innerHTML = `
-      <div class="top3-rank">${i+1}</div>
-      <div class="top3-name">${item.label}</div>
-      <div class="top3-conf">${item.confidence.toFixed(1)}%</div>`;
-    list.appendChild(el);
-  });
 }
 
 function addTag(parent, text){
@@ -827,7 +735,6 @@ function clearResult(){
   document.getElementById('result-empty').style.display   = '';
   document.getElementById('result-loading').style.display = 'none';
   document.getElementById('result-content').classList.remove('show');
-  document.getElementById('conf-bar').style.width = '0%';
 }
 
 function showLoading(){
@@ -842,24 +749,6 @@ function showError(msg){
   document.getElementById('error-box').style.display = 'flex';
 }
 function hideError(){ document.getElementById('error-box').style.display='none'; }
-
-// ── API health check ───────────────────
-async function checkApi(){
-  const dot = document.getElementById('status-dot');
-  const txt = document.getElementById('status-txt');
-  dot.className='status-dot'; txt.textContent='Đang kiểm tra…';
-  try{
-    const res = await fetch('/health', {signal: AbortSignal.timeout(4000)});
-    if(res.ok){ dot.className='status-dot ok'; txt.textContent='Kết nối thành công'; }
-    else       { dot.className='status-dot err'; txt.textContent='Lỗi server '+res.status; }
-  } catch{
-    dot.className='status-dot err';
-    txt.textContent='Không thể kết nối';
-  }
-}
-
-// Auto-check on load
-// checkApi(); // API box removed
 </script>
 </body>
 </html>
