@@ -4,3 +4,4 @@ scikit-learn
 opencv-python-headless
 gunicorn
 flask-cors
+scikit-image
