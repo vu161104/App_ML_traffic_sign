@@ -39,6 +39,8 @@ Truy cập: http://127.0.0.1:5000
 | 9 | Vòng xuyến |
 ## Dataset
 https://drive.google.com/drive/folders/1F01t-1P42Obuq_YormV85Z72YP9rQOUn
+## Link web
+https://app-ml-traffic-sign-5.onrender.com/
 ## Demo
 
 https://drive.google.com/file/d/1RwiFA8OIsDp1ncK83_pbzBJxiOwwJHnp/view?usp=sharing
