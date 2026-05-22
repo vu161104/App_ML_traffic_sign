@@ -23,15 +23,6 @@ python app.py
 
 Truy cập: http://127.0.0.1:5000
 
-## API
-
-| Method | Endpoint | Mô tả |
-|--------|----------|-------|
-| GET | `/` | Giao diện web |
-| GET | `/health` | Kiểm tra server |
-| POST | `/predict` | Dự đoán từ ảnh (`form-data: image`) |
-| GET | `/labels` | Danh sách nhãn |
-
 ## 10 Lớp biển báo
 
 | ID | Biển báo |
